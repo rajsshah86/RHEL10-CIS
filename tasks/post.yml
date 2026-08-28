@@ -64,6 +64,47 @@
   ansible.builtin.command: sysctl --system
   changed_when: true
 
+- name: POST | Align NetworkManager IPv6 method when IPv6 is disabled via sysctl
+  when:
+    - not system_is_container
+    - not rhel10cis_ipv6_required
+    - "'sysctl' in rhel10cis_ipv6_disable_method"
+    - "'NetworkManager' in ansible_facts['packages']"
+  block:
+    - name: POST | Align NetworkManager IPv6 method when IPv6 is disabled via sysctl | Get active connection UUIDs
+      ansible.builtin.command: nmcli -t -f UUID connection show --active
+      changed_when: false
+      failed_when: false
+      check_mode: false
+      register: discovered_nm_active_connection_uuids
+
+    - name: POST | Align NetworkManager IPv6 method when IPv6 is disabled via sysctl | Disable IPv6 on active connections
+      when: discovered_nm_active_connection_uuids.stdout_lines | length > 0
+      ansible.builtin.command: "nmcli connection modify uuid {{ item }} ipv6.method disabled"
+      loop: "{{ discovered_nm_active_connection_uuids.stdout_lines | reject('equalto', '') | list }}"
+      loop_control:
+        label: "{{ item }}"
+      register: discovered_nm_disable_ipv6_results
+      changed_when: discovered_nm_disable_ipv6_results.rc == 0
+      failed_when: false
+
+    - name: POST | Align NetworkManager IPv6 method when IPv6 is disabled via sysctl | Get active devices
+      ansible.builtin.command: nmcli -t -f DEVICE connection show --active
+      changed_when: false
+      failed_when: false
+      check_mode: false
+      register: discovered_nm_active_devices
+
+    - name: POST | Align NetworkManager IPv6 method when IPv6 is disabled via sysctl | Reapply active devices safely
+      when: discovered_nm_active_devices.stdout_lines | length > 0
+      ansible.builtin.command: "nmcli device reapply {{ item }}"
+      loop: "{{ discovered_nm_active_devices.stdout_lines | reject('equalto', '') | reject('equalto', 'lo') | list }}"
+      loop_control:
+        label: "{{ item }}"
+      register: discovered_nm_reapply_results
+      changed_when: discovered_nm_reapply_results.rc == 0
+      failed_when: false
+
 - name: POST | Flush handlers
   ansible.builtin.meta: flush_handlers
 
