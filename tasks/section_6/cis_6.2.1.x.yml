@@ -112,13 +112,10 @@
     - syslog
     - rule_6.2.1.4
   block:
-    - name: "6.2.1.4 | PATCH | Ensure only one logging system is in use | when rsyslog"
-      when: rhel10cis_syslog == "rsyslog"
-      ansible.builtin.systemd:
-        name: systemd-journald
-        state: stopped
-        enabled: false
-
+    # NOTE: systemd-journald is socket-activated and is the base log collector on
+    # RHEL 10; it must remain running. Under rsyslog, journald forwards to rsyslog
+    # via 6.2.3.3 (ForwardToSyslog=yes), so exclusivity is met without stopping it.
+    # Stopping journald here would contradict 6.2.1.1 and break 6.2.3.3 forwarding.
     - name: "6.2.1.4 | PATCH | Ensure only one logging system is in use | when journald"
       when: rhel10cis_syslog == "journald"
       ansible.builtin.systemd:
