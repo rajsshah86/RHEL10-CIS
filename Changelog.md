@@ -1,8 +1,10 @@
 # Changes to rhel10CIS
 
-## July 2026
+## August 2026
 
 - 6.2.1.4 no longer stops systemd-journald under rsyslog; journald stays active and forwards to rsyslog via 6.2.3.3 (relates to #114)
+
+## July 2026
 
 - actions workflow update version
 - Updated location that goss is taken from goss-org moved to krameff
